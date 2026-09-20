@@ -12,6 +12,7 @@ import urllib.request
 import uuid
 
 from .tools import BY_NAME, READ_ONLY
+from .config import resolve_connection
 
 
 class AutomationError(Exception):
@@ -27,12 +28,8 @@ class AutomationError(Exception):
 
 
 class Client:
-    def __init__(self, project=None, port=None, token=None, timeout=70):
-        self.project = str(Path(project or os.environ["TOMCAT_PROJECT"]).resolve())
-        self.port = int(port or os.environ.get("TOMCAT_AUTOMATION_PORT", "8091"))
-        self.token = token or os.environ["TOMCAT_AUTOMATION_TOKEN"]
-        if not 1 <= self.port <= 65535 or len(self.token) < 16 or "\r" in self.token or "\n" in self.token:
-            raise ValueError("Invalid automation port or token (minimum 16 characters).")
+    def __init__(self, project=None, port=None, token=None, timeout=70, config=None):
+        self.project, self.port, self.token = resolve_connection(project, port, token, config)
         self.url = f"http://127.0.0.1:{self.port}"
         self.timeout = timeout
         self.session = None
@@ -129,12 +126,16 @@ def main():
     parser.add_argument("tool", choices=[*BY_NAME, "list"])
     parser.add_argument("arguments", nargs="?", default="{}", help="JSON arguments")
     parser.add_argument("--project")
+    parser.add_argument("--config", help="Connection JSON file (default: ~/.tomcat/automation.json)")
     args = parser.parse_args()
     if args.tool == "list":
         from .tools import TOOLS
         result = TOOLS
     else:
-        result = Client(project=args.project).call(args.tool, json.loads(args.arguments))
+        try:
+            result = Client(project=args.project, config=args.config).call(args.tool, json.loads(args.arguments))
+        except ValueError as exc:
+            result = AutomationError("CONFIG_OR_ARGUMENT_ERROR", str(exc)).result()
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if not isinstance(result, dict) or result.get("ok") else 1
 

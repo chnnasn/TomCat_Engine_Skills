@@ -55,56 +55,65 @@ python -m venv .venv
 开发时使用 `pip install -e ".[mcp]"`。本包尚未声明已发布到 PyPI，
 安装源以包含这些文件的本地工作区或 Git 版本为准。
 
-## 启动 Editor
+## 通用连接配置
 
-需要带有 Automation API 的 TomCat Editor，协议版本为 **1**。
-旧版 Editor 仅安装本 Python 包不会自动获得这些能力。
-
-在启动 Editor 的 PowerShell 中设置：
-
-```powershell
-$env:TOMCAT_AUTOMATION_PORT = '8091'
-$env:TOMCAT_AUTOMATION_TOKEN = [guid]::NewGuid().ToString('N')
-$env:TOMCAT_PROJECT = 'C:/MyGame/Project.tcproj'
-& 'C:/TomCat/TomCat.exe' $env:TOMCAT_PROJECT
-```
-
-Editor 未设置端口时默认关闭自动化服务。端口占用或令牌不足 16 字符时启动服务失败，
-不会自动连接到别的实例。每个 Editor 使用不同端口；客户端与 Editor 使用相同令牌。
-令牌保存在本地环境或客户端设置中，不要提交到 Git。
-
-## 接入 MCP
-
-以下为通用 stdio 配置示例；根据客户端调整外层配置格式，替换安装路径、项目路径和令牌。
-MCP 服务进程不需要指定工作目录，也不需要 `PYTHONPATH` 或引擎源码路径。
+Skill 不绑定某台电脑、安装目录或项目。安装后，MCP 可以只配置命令：
 
 ```json
 {
   "mcpServers": {
     "tomcat-editor": {
-      "command": "E:/Github/TomCat_Engine_Skills/.venv/Scripts/python.exe",
-      "args": ["-m", "tomcat_skills.server"],
-      "env": {
-        "TOMCAT_PROJECT": "C:/MyGame/Project.tcproj",
-        "TOMCAT_AUTOMATION_PORT": "8091",
-        "TOMCAT_AUTOMATION_TOKEN": "REPLACE_WITH_THE_EDITOR_TOKEN"
-      }
+      "command": "tomcat-mcp"
     }
   }
 }
 ```
 
-也可以直接把 `.venv/Scripts/tomcat-mcp.exe` 配置成 command，不传 args。
-先调用 `editor_get_status`、`component_get_schema` 和 `scene_get_tree` 确认连接与能力。
+前提是 **启动 Agent 的进程 PATH 能找到 tomcat-mcp**。本地虚拟环境安装可在激活 `.venv` 后从同一终端启动 Agent；桌面启动的 Agent 不一定继承这个环境。也可使用已加入 PATH 的 Python 工具环境安装本包。若宿主不支持 PATH 查找，则填写实际 `tomcat-mcp` 可执行文件路径，这属于宿主安装配置，Skill 不依赖它。Windows 虚拟环境中的命令位于 `.venv/Scripts/tomcat-mcp.exe`。
+
+在当前用户主目录创建 `.tomcat/automation.json`（Windows 通常为 `%USERPROFILE%/.tomcat/automation.json`），集中保存连接参数：
+
+```json
+{
+  "project": "/absolute/path/to/YourGame.tcproj",
+  "port": 8091,
+  "token": "REPLACE_WITH_THE_EDITOR_TOKEN"
+}
+```
+
+这是本机配置示例，不是仓库固定路径：project 改为实际项目，token 使用与 Editor 一致的随机令牌（至少 16 字符，可用 `[guid]::NewGuid().ToString('N')` 生成）。文件含令牌，应只保存在本机，不提交到项目仓库。port 可省略，默认 8091。
+
+字段优先级为 **显式 Client 参数 / CLI --project → 环境变量 → 连接文件 → 默认端口**。原有 `TOMCAT_PROJECT`、`TOMCAT_AUTOMATION_PORT`、`TOMCAT_AUTOMATION_TOKEN` 配置继续有效。文件里的相对 project 路径相对配置文件目录解析；显式参数/环境变量的相对路径相对进程工作目录解析。
+
+多项目可分别保存连接文件，用 `tomcat-mcp --config <文件路径>`、`tomcat-skills --config <文件路径> editor_get_status` 或 `TOMCAT_AUTOMATION_CONFIG` 选择。显式指定的文件缺失会报错，不会退回其他项目。配置在进程启动时读取，切换项目/令牌后重启 MCP；不会扫描端口、猜测令牌或自动切到别的 Editor。
+
+## 启动 Editor
+
+需要带有 Automation API 的 TomCat Editor，协议版本为 **1**。本 Python 包读取连接文件；引擎仍通过环境变量启用 HTTP，尚不会自动读取这个文件。
+
+以下 PowerShell 示例读取同一配置，避免两处手工填写。project 使用绝对路径，Editor 路径通过交互输入：
+
+```powershell
+$connection = Get-Content (Join-Path $HOME '.tomcat/automation.json') -Raw | ConvertFrom-Json
+$env:TOMCAT_AUTOMATION_PORT = if ($null -eq $connection.port) { '8091' } else { [string]$connection.port }
+$env:TOMCAT_AUTOMATION_TOKEN = $connection.token
+$env:TOMCAT_PROJECT = $connection.project
+$editorExecutable = Read-Host 'Editor executable path'
+& $editorExecutable $env:TOMCAT_PROJECT
+```
+
+Editor 未设置端口时默认关闭自动化服务。端口占用或令牌不足 16 字符时启动服务失败。多个 Editor 使用不同端口；配置文件不会自动启动 Editor，也不能给缺少 Automation API 的引擎添加服务。
+
+MCP 不需要指定仓库工作目录、PYTHONPATH 或引擎源码路径。连接后先调用 `editor_get_status`、`component_get_schema` 和 `scene_get_tree` 核对项目与能力；项目匹配和编辑器会话检查仍保留。
 
 ## 使用客户端和 Skill
 
-客户端使用与 MCP 相同的三个环境变量。CLI 示例：
+客户端与 MCP 共用上述配置文件和环境变量。CLI 示例（命令已在 PATH 中）：
 
 ```powershell
-.venv/Scripts/tomcat-skills.exe list
-.venv/Scripts/tomcat-skills.exe editor_get_status
-.venv/Scripts/python.exe -m tomcat_skills scene_get_tree '{"limit":20}'
+tomcat-skills list
+tomcat-skills editor_get_status
+tomcat-skills scene_get_tree '{"limit":20}'
 ```
 
 Python 多步操作使用同一个 Client，保留失败重试所需的请求记录：

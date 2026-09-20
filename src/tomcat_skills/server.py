@@ -1,4 +1,5 @@
 """TomCat MCP stdio adapter. All scene semantics live in the Editor."""
+import argparse
 import asyncio
 import json
 
@@ -27,14 +28,20 @@ def create_server(client):
     return server
 
 
-async def serve():
-    server = create_server(Client())
+async def serve(config=None):
+    server = create_server(Client(config=config))
     async with stdio_server() as (read, write):
         await server.run(read, write, server.create_initialization_options())
 
 
 def main():
-    asyncio.run(serve())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", help="Connection JSON file (default: ~/.tomcat/automation.json)")
+    args = parser.parse_args()
+    try:
+        asyncio.run(serve(config=args.config))
+    except ValueError as exc:
+        parser.error(str(exc))
 
 
 if __name__ == "__main__":

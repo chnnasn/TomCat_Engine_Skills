@@ -5,11 +5,22 @@ description: Drive the TomCat 2D Editor through its local automation API or MCP 
 
 # TomCat Editor automation
 
-Use the connected TomCat MCP tools if available. Otherwise use the dependency-free
-client via `scripts/tomcat.py`. Run it with a Python environment containing the
-installed `tomcat-engine-skills` package. Both paths require `TOMCAT_PROJECT` (absolute `.tcproj`
-path), `TOMCAT_AUTOMATION_PORT`, and `TOMCAT_AUTOMATION_TOKEN`. The Editor must have
-been started with the same port and token. Never echo the token in responses.
+Use the connected TomCat MCP tools if available. Otherwise use `tomcat-skills`
+on PATH, or `scripts/tomcat.py` with a Python environment containing the installed
+`tomcat-engine-skills` package. Do not assume a checkout location, adjacent engine
+repository, specific drive, or virtual environment name.
+
+Connections use `~/.tomcat/automation.json` with `project`, `port`, and `token`.
+Choose another file using `--config` (CLI/MCP startup) or
+`TOMCAT_AUTOMATION_CONFIG`. Explicit Client parameters / CLI `--project` override
+environment variables, which override file fields. Existing `TOMCAT_PROJECT`,
+`TOMCAT_AUTOMATION_PORT`, and `TOMCAT_AUTOMATION_TOKEN` remain supported; the port
+defaults to 8091. Relative project paths in files resolve beside the config file.
+Keep connection settings outside the Skill; never echo tokens or commit them.
+The Editor must separately enable its Automation API with matching port/token.
+A config file does not start or discover an Editor. Missing configuration calls
+for selecting the intended project/connection, not scanning for an arbitrary one.
+Restart MCP after changing connection settings; verify project and session again.
 
 ## Engine compatibility and feature routing
 
