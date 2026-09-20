@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tomcat-engine-skills"
 version = "0.1.0"
-description = "Python client, MCP adapter and Agent Skill for TomCat Editor automation"
+description = "Python client, MCP adapter and modular Agent Skills for TomCat Engine"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -29,3 +29,10 @@ where = ["src"]
 "share/tomcat-engine-skills/skills/tomcat-editor" = ["skills/tomcat-editor/SKILL.md"]
 "share/tomcat-engine-skills/skills/tomcat-editor/references" = ["skills/tomcat-editor/references/physics2d.md"]
 "share/tomcat-engine-skills/skills/tomcat-editor/scripts" = ["skills/tomcat-editor/scripts/tomcat.py"]
+"share/tomcat-engine-skills/skills/tomcat-prefab" = ["skills/tomcat-prefab/SKILL.md"]
+"share/tomcat-engine-skills/skills/tomcat-runtime-ui" = ["skills/tomcat-runtime-ui/SKILL.md"]
+"share/tomcat-engine-skills/skills/tomcat-scene-streaming" = ["skills/tomcat-scene-streaming/SKILL.md"]
+"share/tomcat-engine-skills/skills/tomcat-profiler" = ["skills/tomcat-profiler/SKILL.md"]
+"share/tomcat-engine-skills/skills/tomcat-assets" = ["skills/tomcat-assets/SKILL.md"]
+"share/tomcat-engine-skills/skills/tomcat-animation" = ["skills/tomcat-animation/SKILL.md"]
+"share/tomcat-engine-skills/skills/tomcat-tilemap" = ["skills/tomcat-tilemap/SKILL.md"]

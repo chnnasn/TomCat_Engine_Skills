@@ -28,6 +28,24 @@ class InstalledPackageTests(unittest.TestCase):
         executable = Path(sys.executable).with_name("tomcat-skills.exe" if os.name == "nt" else "tomcat-skills")
         self.run_catalog([str(executable), "list"])
 
+    def test_all_skill_resources_are_installed(self):
+        source = Path(__file__).resolve().parents[1] / "skills"
+        installed = Path(sys.prefix) / "share/tomcat-engine-skills/skills"
+        if not installed.is_dir():
+            self.skipTest("Requires a regular environment install with wheel data files")
+        entries = list(source.glob("*/SKILL.md"))
+        self.assertTrue(entries, "No discoverable skills in the source distribution")
+        for entry in entries:
+            for resource in entry.parent.rglob("*"):
+                if not resource.is_file() or "__pycache__" in resource.parts:
+                    continue
+                relative = resource.relative_to(source)
+                with self.subTest(resource=str(relative)):
+                    target = installed / relative
+                    self.assertTrue(target.is_file(), f"Missing installed skill resource: {relative}")
+                    self.assertEqual(resource.read_bytes(), target.read_bytes(),
+                                     f"Installed skill resource is stale: {relative}")
+
     def test_wheel_skill_launcher(self):
         skill = Path(sys.prefix) / "share/tomcat-engine-skills/skills/tomcat-editor"
         if not skill.is_dir():

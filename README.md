@@ -1,14 +1,32 @@
 # TomCat Engine Skills
 
-TomCat 编辑器的独立 **Python 客户端、MCP 服务与 Agent Skill**。
+TomCat 编辑器的独立 **Python 客户端、MCP 服务与模块化 Agent Skills**。
 外部 Agent 负责理解任务和选择工具；本仓库通过编辑器的本地 HTTP 接口执行操作，
 不内置大模型，也不提供独立 Agent 的规划或记忆系统。
 
 ```text
-外部 Agent + tomcat-editor Skill
+外部 Agent + 按任务选择的 Skills
     ├── MCP stdio → tomcat-mcp ──┐
     └── Python → Client ────────┴→ 编辑器本地 HTTP → 主线程 → 场景操作
 ```
+
+## 新增功能 Skill（引擎 v0.3.0）
+
+已按引擎 main `0a731be`（2026-09-20）核对，现有自动化 Skill 之外新增 7 个可独立安装的模块：
+
+| Skill | 使用场景 | 执行方式 |
+| --- | --- | --- |
+| [tomcat-prefab](skills/tomcat-prefab/SKILL.md) | 关联模板、逐属性覆盖、嵌套、变体 | Editor UI / 源码指导 |
+| [tomcat-runtime-ui](skills/tomcat-runtime-ui/SKILL.md) | 滑条、滚动、输入、主题、本地化 | Editor UI / C# 开发 |
+| [tomcat-scene-streaming](skills/tomcat-scene-streaming/SKILL.md) | 异步激活、叠加、卸载、持久对象 | C# 开发 / Runtime Scenes |
+| [tomcat-profiler](skills/tomcat-profiler/SKILL.md) | CPU/GPU、资源内存、外部断点 | Editor UI / trace 分析 |
+| [tomcat-assets](skills/tomcat-assets/SKILL.md) | 资源 Inspector、导入、Atlas | Editor UI / 源码指导 |
+| [tomcat-animation](skills/tomcat-animation/SKILL.md) | Clip、Controller、参数与过渡 | Editor UI / 源码指导 |
+| [tomcat-tilemap](skills/tomcat-tilemap/SKILL.md) | Grid、Palette、地图绘制 | Editor UI / 源码指导 |
+
+**该引擎 main 基线不含原生 Automation API。** 新 Skill 可指导 Agent 编写项目代码、分析源码，或通过可用 UI 工具操作编辑器；它们没有新增 MCP 执行接口。MCP 仍为 18 个工具，需要另行提供已集成 Automation API 的 Editor。仅安装本包不会给 main 增加 HTTP 服务，`list` 输出也不证明 Editor 支持这些工具。
+
+每个 Skill 标明引擎源码相对路径、操作步骤、验证方式和功能限制。使用其他版本时重新核对对应实现；引擎源码根目录与游戏项目根目录应分别识别。没有源码或 UI 操作能力时，Agent 应说明缺少的执行依据，不声称已操作编辑器。
 
 ## 仓库边界
 
@@ -19,7 +37,7 @@ TomCat 编辑器的独立 **Python 客户端、MCP 服务与 Agent Skill**。
 | 客户端测试、跨仓库集成测试入口 | C++ 编译、引擎实现、示例游戏 |
 
 日常使用只需要安装本包并连接支持自动化协议的 Editor，不需要引擎源码。
-只有从源码编译 Editor、运行本仓库的集成回归时才需要指定引擎仓库。
+从源码编译 Editor、运行集成回归，或按新增 Skill 核对实现时，需要指定引擎仓库。
 
 ## 安装
 
@@ -100,12 +118,12 @@ schema = editor.call("component_get_schema")
 entities = editor.call("scene_get_tree", {"limit": 20})
 ```
 
-把 [skills/tomcat-editor](skills/tomcat-editor/SKILL.md) 整个目录复制到 Agent
-支持的技能目录。Skill 优先使用 MCP 工具；没有 MCP 时，其 `scripts/tomcat.py`
+从 `skills/` 选择需要的模块，将各个 `tomcat-*` 完整目录复制到 Agent 支持的技能目录，可一次安装全部 8 个；不要只复制 SKILL.md。
+[tomcat-editor](skills/tomcat-editor/SKILL.md) 优先使用 MCP 工具；没有 MCP 时，其 `scripts/tomcat.py`
 可通过**已安装本包的 Python**执行。无需旧版的 `TOMCAT_AUTOMATION_HOME`。
 
 wheel 安装也会把 Skill 文件放入 Python 环境下的
-`share/tomcat-engine-skills/skills/tomcat-editor`，可从那里复制完整目录。
+`share/tomcat-engine-skills/skills/`，可从那里复制各个完整模块目录。
 安装 Python 包本身不会修改 Agent 的全局配置。
 
 ## 能力与兼容范围
@@ -118,7 +136,8 @@ V1 提供 **18 个工具**：状态、实体树、组件 Schema、实体属性�
 并接入撤销；停止运行会恢复编辑状态。协议通过 `protocol_version=1` 检查兼容性，
 组件名称、ID 与可写字段以连接中的 Editor 返回的 Schema 为准。
 
-目前不提供截图、资源导入、脚本编辑、构建任务、批量事务和独立 Agent。
+MCP 目前不提供截图、资源导入、脚本编辑、构建任务或批量事务；本仓库不内置独立 Agent。
+新增 Skill 中的源码开发和 UI 操作依赖外部 Agent 已有能力。
 未保存过的场景需要先在 Editor 中执行一次 Save As。
 详细请求约定、错误与重试语义见 [协议说明](docs/protocol.md)。
 
@@ -130,7 +149,8 @@ V1 提供 **18 个工具**：状态、实体树、组件 Schema、实体属性�
 .venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-真实编辑器与 MCP 集成测试需明确指定引擎仓库，目录无需相邻：
+真实编辑器与 MCP 集成测试需指定已包含原生 Automation API 的引擎检出，目录无需相邻。
+上述 v0.3.0 main 基线不能直接运行此回归；先确认 Editor 已集成协议，再执行：
 
 ```powershell
 & scripts/Run-AutomationRegression.ps1 -EngineRoot E:/Github/TomCat_Engine
@@ -145,7 +165,7 @@ V1 提供 **18 个工具**：状态、实体树、组件 Schema、实体属性�
 
 ```text
 src/tomcat_skills/       Python 包、CLI 与 MCP 服务
-skills/tomcat-editor/    可复制安装的 Agent Skill
+skills/tomcat-*/         8 个可独立复制安装的 Agent Skills
 tests/                  客户端与真实 Editor 测试
 scripts/                跨仓库回归入口
 docs/                   协议与行为约定

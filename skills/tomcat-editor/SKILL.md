@@ -11,6 +11,30 @@ installed `tomcat-engine-skills` package. Both paths require `TOMCAT_PROJECT` (a
 path), `TOMCAT_AUTOMATION_PORT`, and `TOMCAT_AUTOMATION_TOKEN`. The Editor must have
 been started with the same port and token. Never echo the token in responses.
 
+## Engine compatibility and feature routing
+
+TomCat v0.3.0 main at `0a731be` does not include the native Automation API.
+Installing this package or setting environment variables cannot enable it. Use
+live tools only with a compatible Editor build; if the API is absent, continue
+with source guidance or available Editor UI tools rather than retrying a missing
+service. Local `list` only lists client schemas, not live engine capabilities.
+
+For feature work, load the relevant module if installed; each module also works
+independently for its documented UI/source workflow:
+
+| Skill | Task |
+| --- | --- |
+| tomcat-prefab | Linked instances, overrides, nesting and variants |
+| tomcat-runtime-ui | Canvas controls, themes and localization |
+| tomcat-scene-streaming | C# async/additive loading and persistent roots |
+| tomcat-profiler | CPU/GPU/memory interpretation and C# debugging |
+| tomcat-assets | Asset Inspector, import settings and Sprite Atlas |
+| tomcat-animation | Sprite clips and Animator controllers |
+| tomcat-tilemap | Grid, Tile Palette and tile authoring |
+
+These modules do not add MCP endpoints. Registered/script-accessible components
+are not proof of writable MCP properties; query the connected Editor schema.
+
 ## Discover and inspect
 
 - Call `editor_get_status` first. Confirm project, state and scene path. A project
